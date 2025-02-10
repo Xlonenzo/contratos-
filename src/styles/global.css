@@ -1,0 +1,14 @@
+/* Adicione estas classes ao seu arquivo de estilos global */
+.content-wrapper {
+  transition: all 0.3s ease-in-out;
+  width: 100%;
+  height: 100%;
+}
+
+.content-wrapper.sidebar-collapsed {
+  margin-left: calc(64px + 2rem);
+}
+
+.content-wrapper.sidebar-expanded {
+  margin-left: calc(256px + 3rem);
+} 
