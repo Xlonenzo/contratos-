@@ -6,7 +6,13 @@ import {
   Users,
   Palette,
   HelpCircle,
-  Bell
+  Bell,
+  Bot,
+  AlertTriangle,
+  Users as UsersGroup,
+  FileBarChart,
+  ClipboardCheck,
+  Building2
 } from 'lucide-react';
 
 // Menu principal da Sidebar
@@ -36,6 +42,12 @@ export const menuItems = [
         description: 'Personalizar interface'
       }
     ]
+  },
+  {
+    name: 'Organizações',
+    path: '/organizations',
+    icon: <Building2 size={20} />,
+    description: 'Gerenciar organizações'
   },
   {
     name: 'Contratos',
