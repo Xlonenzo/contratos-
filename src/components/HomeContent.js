@@ -378,5 +378,5 @@ const HomeContent = ({ projectData: existingProjectData, bondsData, buttonColor,
     </div>
   );
 };
-
 export default HomeContent;
+

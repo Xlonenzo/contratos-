@@ -853,5 +853,5 @@ function UserManagement({ buttonColor, isSidebarCollapsed }) {
     </div>
   );
 }
-
 export default UserManagement;
+

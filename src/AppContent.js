@@ -11,10 +11,6 @@ import Customization from './components/Customization';
 import HomeContent from './components/HomeContent';
 import { menuItems } from './data/menuItems';
 import ContractsManagement from './pages/contracts/ContractsManagement';
-import AIAnalysisManagement from './pages/ai-analysis/AIAnalysisManagement';
-import IssuesManagement from './pages/issues/IssuesManagement';
-import CollaborationManagement from './pages/collaboration/CollaborationManagement';
-import OrganizationManagement from './pages/organizations/OrganizationManagement';
 
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -123,15 +119,6 @@ function AppContent() {
               path="/admin/user-management" 
               element={
                 <UserManagement 
-                  buttonColor={customization.button_color} 
-                  isSidebarCollapsed={isSidebarCollapsed}
-                />
-              } 
-            />
-            <Route 
-              path="/organizations" 
-              element={
-                <OrganizationManagement 
                   buttonColor={customization.button_color}
                   isSidebarCollapsed={isSidebarCollapsed}
                 />

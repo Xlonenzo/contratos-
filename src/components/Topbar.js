@@ -308,5 +308,5 @@ Topbar.propTypes = {
   isSidebarCollapsed: PropTypes.bool,
   setActiveMenuItem: PropTypes.func
 };
-
 export default Topbar;
+

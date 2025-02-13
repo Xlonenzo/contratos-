@@ -1,145 +1,120 @@
 import React, { useState } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { X, AlertTriangle, Bookmark } from 'lucide-react';
 
-const IssueTooltip = ({ 
-  position, 
-  selectedText, 
-  onSubmit, 
-  onClose,
-  buttonColor,
-  existingIssue 
-}) => {
-  const [issueData, setIssueData] = useState({
-    title: '',
-    description: '',
-    priority: 'medium',
-    issue_type: 'task'
-  });
+const IssueTooltip = ({ position, selectedText, type, data, onSubmit, onClose }) => {
+  const [title, setTitle] = useState(data?.title || '');
+  const [description, setDescription] = useState(data?.description || '');
+  const [priority, setPriority] = useState(data?.priority || 'medium');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit({
-      ...issueData,
-      selection_text: selectedText,
-      text_position: position
+      title,
+      description,
+      priority,
+      selectedText
     });
   };
 
   return (
     <div 
-      className="absolute z-50 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-80"
+      className="absolute z-50 bg-white rounded-lg shadow-lg border border-gray-200 w-80"
       style={{
-        top: position.y + window.scrollY + 20,
-        left: position.x
+        left: position.x,
+        top: position.y + 8,
+        transform: 'translateX(-50%)',
+        maxWidth: 'calc(100% - 2rem)',
+        margin: '0 1rem'
       }}
     >
-      {existingIssue ? (
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-medium flex items-center gap-2">
-              <AlertTriangle size={16} />
-              Issue #{existingIssue.id}
-            </h3>
-            <button 
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          
-          <div>
-            <h4 className="font-medium">{existingIssue.title}</h4>
-            <p className="text-sm text-gray-600 mt-1">{existingIssue.description}</p>
-          </div>
-
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Prioridade: {existingIssue.priority}</span>
-            <span className="text-gray-500">Tipo: {existingIssue.issue_type}</span>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between p-3 border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          {type === 'issue' ? (
+            <AlertTriangle className="text-red-500" size={18} />
+          ) : (
+            <Bookmark className="text-yellow-500" size={18} />
+          )}
+          <span className="font-medium">
+            {type === 'issue' ? 'Nova Issue' : 'Novo Bookmark'}
+          </span>
         </div>
-      ) : (
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-sm font-medium flex items-center gap-2">
-            <AlertTriangle size={16} />
-            Nova Issue
-          </h3>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
+        <button 
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          <X size={18} />
+        </button>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
+      {/* Formulário */}
+      <form onSubmit={handleSubmit} className="p-3">
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Título
           </label>
           <input
             type="text"
-            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             className="w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:outline-none"
-            value={issueData.title}
-            onChange={(e) => setIssueData(prev => ({ ...prev, title: e.target.value }))}
+            placeholder={type === 'issue' ? 'Título da issue' : 'Título do bookmark'}
+            required
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
             Descrição
           </label>
           <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             className="w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:outline-none"
             rows={3}
-            value={issueData.description}
-            onChange={(e) => setIssueData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder={type === 'issue' ? 'Descreva o problema...' : 'Adicione uma nota...'}
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
+        {type === 'issue' && (
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Prioridade
             </label>
             <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
               className="w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:outline-none"
-              value={issueData.priority}
-              onChange={(e) => setIssueData(prev => ({ ...prev, priority: e.target.value }))}
             >
               <option value="low">Baixa</option>
               <option value="medium">Média</option>
               <option value="high">Alta</option>
-              <option value="critical">Crítica</option>
             </select>
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              Tipo
-            </label>
-            <select
-              className="w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:outline-none"
-              value={issueData.issue_type}
-              onChange={(e) => setIssueData(prev => ({ ...prev, issue_type: e.target.value }))}
-            >
-              <option value="task">Tarefa</option>
-              <option value="bug">Problema</option>
-              <option value="improvement">Melhoria</option>
-              <option value="question">Dúvida</option>
-            </select>
+        <div className="text-sm text-gray-500 mb-3">
+          <strong>Texto selecionado:</strong>
+          <div className="mt-1 p-2 bg-gray-50 rounded">
+            {selectedText}
           </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
+          >
+            Cancelar
+          </button>
           <button
             type="submit"
-            style={{ backgroundColor: buttonColor }}
-            className="px-4 py-2 text-sm font-medium text-white rounded hover:opacity-90"
+            className={`px-3 py-1.5 text-sm text-white rounded ${
+              type === 'issue' ? 'bg-red-500 hover:bg-red-600' : 'bg-yellow-500 hover:bg-yellow-600'
+            }`}
           >
-            Criar Issue
+            {type === 'issue' ? 'Criar Issue' : 'Criar Bookmark'}
           </button>
         </div>
       </form>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { API_URL } from '../../config';
 import { 
@@ -32,6 +32,8 @@ import 'react-quill/dist/quill.snow.css';
 import IssueTooltip from '../../components/IssueTooltip';
 import { toast } from 'react-hot-toast';
 import CustomQuill from '../../components/CustomQuill';
+import IssuesSidebar from '../../components/IssuesSidebar';
+import CustomEditor from '../../components/CustomEditor';
 
 // Estilos base
 const baseStyles = {
@@ -187,6 +189,14 @@ function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [tooltipPosition, setTooltipPosition] = useState(null);
+  const [tooltipType, setTooltipType] = useState(null);
+  const [selectedRange, setSelectedRange] = useState(null);
+  const [editorValue, setEditorValue] = useState([
+    {
+      type: 'paragraph',
+      children: [{ text: '' }],
+    },
+  ]);
 
   // Configuração do editor
   const editorModules = {
@@ -370,35 +380,54 @@ function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
     }
   };
 
-  // Função para lidar com a seleção de texto
-  const handleTextSelection = () => {
-    const selection = window.getSelection();
-    const text = selection.toString().trim();
+  // Handler para seleção de texto
+  const handleTextSelection = useCallback((range) => {
+    if (!range) return;
+    setSelectedRange(range);
+  }, []);
+
+  // Handler para clique em issues/bookmarks
+  const handleIssueClick = useCallback((issueId, position, type) => {
+    if (!quillRef.current) return;
     
-    if (text) {
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      
-      setSelectedText(text);
-      setTooltipPosition({
-        x: rect.left,
-        y: rect.bottom,
-        start: range.startOffset,
-        end: range.endOffset
-      });
-    } else {
-      setTooltipPosition(null);
-    }
+    setTooltipPosition(position);
+    setSelectedText(quillRef.current.getEditor().getText(
+      position.index,
+      position.length
+    ));
+    setTooltipType(type);
+  }, []);
+
+  const handleTooltipClose = () => {
+    if (!quillRef.current || !selectedRange) return;
+    
+    const quill = quillRef.current.getEditor();
+    quill.removeFormat(selectedRange.index, selectedRange.length);
+    
+    setTooltipPosition(null);
+    setSelectedText('');
+    setTooltipType(null);
+    setSelectedRange(null);
   };
 
-  // Função para aplicar highlight ao criar issue
-  const applyIssueHighlight = (issueId) => {
-    const quill = quillRef.current.getEditor();
-    const selection = quill.getSelection();
-    if (selection) {
-      quill.formatText(selection.index, selection.length, {
-        'issue': { id: issueId }
+  // Handler para criar bookmark
+  const handleCreateBookmark = async (bookmarkData) => {
+    try {
+      if (!quillRef.current || !selectedRange) return;
+
+      const quill = quillRef.current.getEditor();
+      quill.formatText(selectedRange.index, selectedRange.length, {
+        'bookmark': true
       });
+
+      // Aqui você pode adicionar a lógica para salvar o bookmark no backend
+      
+      setTooltipPosition(null);
+      setSelectedRange(null);
+      toast.success('Bookmark criado com sucesso!');
+    } catch (err) {
+      console.error('Erro ao criar bookmark:', err);
+      toast.error('Erro ao criar bookmark');
     }
   };
 
@@ -431,16 +460,36 @@ function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
     }
   };
 
-  // Handler para clique em issues existentes
-  const handleIssueClick = (issueId, position) => {
-    const issue = issues.find(i => i.id === issueId);
-    if (issue) {
-      setTooltipPosition({
-        ...position,
-        issueId
+  // Função para aplicar highlight ao criar issue
+  const applyIssueHighlight = (issueId) => {
+    const quill = quillRef.current.getEditor();
+    const selection = quill.getSelection();
+    if (selection) {
+      quill.formatText(selection.index, selection.length, {
+        'issue': { id: issueId }
       });
     }
   };
+
+  // Handler para mudanças no editor com validação
+  const handleEditorChange = useCallback((newValue) => {
+    if (newValue && Array.isArray(newValue) && newValue.length > 0) {
+      setEditorValue(newValue);
+    }
+  }, []);
+
+  // Handler para cliques em marcações
+  const handleMarkClick = useCallback((type, range) => {
+    if (!range) return;
+
+    setTooltipPosition({
+      x: range.getBoundingClientRect().left,
+      y: range.getBoundingClientRect().bottom,
+      index: range.anchor.offset,
+      length: range.focus.offset - range.anchor.offset
+    });
+    setTooltipType(type);
+  }, []);
 
   return (
     <div className={`fixed top-12 ${isSidebarCollapsed ? 'left-16' : 'left-64'} right-0 bottom-0 flex flex-col transition-all duration-300`}>
@@ -717,97 +766,30 @@ function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
                 </form>
               ) : (
                 <div className="flex gap-4">
-                  {/* Editor de Texto */}
+                  {/* Editor */}
                   <div className="flex-1 relative">
-                    <CustomQuill 
-                      value={contractText}
-                      onChange={setContractText}
-                      onChangeSelection={handleTextSelection}
-                      onIssueClick={handleIssueClick}
-                      ref={quillRef}
+                    <CustomEditor
+                      value={editorValue}
+                      onChange={handleEditorChange}
+                      onMarkClick={handleMarkClick}
                     />
                     
                     {tooltipPosition && (
                       <IssueTooltip
                         position={tooltipPosition}
                         selectedText={selectedText}
-                        onSubmit={handleCreateIssue}
-                        onClose={() => setTooltipPosition(null)}
+                        onSubmit={tooltipType === 'issue' ? handleCreateIssue : handleCreateBookmark}
+                        onClose={handleTooltipClose}
                         buttonColor={buttonColor}
-                        existingIssue={tooltipPosition.issueId ? issues.find(i => i.id === tooltipPosition.issueId) : null}
+                        type={tooltipType}
+                        existingIssue={tooltipType === 'issue' && tooltipPosition.issueId ? 
+                          issues.find(i => i.id === tooltipPosition.issueId) : null}
                       />
                     )}
                   </div>
 
-                  {/* Barra Lateral de Funcionalidades */}
-                  <div className="w-64 border-l border-gray-200 pl-4 space-y-4">
-                    {/* Comentários */}
-                    <div>
-                      <h3 className="text-sm font-medium flex items-center gap-2 mb-2">
-                        <MessageCircle size={16} />
-                        Comentários
-                      </h3>
-                      <div className="space-y-2">
-                        {comments.map(comment => (
-                          <div key={comment.id} className="text-sm bg-gray-50 p-2 rounded">
-                            <div className="font-medium">{comment.user}</div>
-                            <div>{comment.text}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setShowCommentForm(true)}
-                        className="text-sm text-blue-600 hover:text-blue-800 mt-2"
-                      >
-                        Adicionar comentário
-                      </button>
-                    </div>
-
-                    {/* Análise IA */}
-                    <div>
-                      <h3 className="text-sm font-medium flex items-center gap-2 mb-2">
-                        <Bot size={16} />
-                        Análise IA
-                      </h3>
-                      <button
-                        onClick={handleAIAnalysis}
-                        className="text-sm bg-purple-50 text-purple-700 px-3 py-1.5 rounded hover:bg-purple-100"
-                      >
-                        Analisar Contrato
-                      </button>
-                    </div>
-
-                    {/* Issues */}
-                    <div>
-                      <h3 className="text-sm font-medium flex items-center gap-2 mb-2">
-                        <AlertTriangle size={16} />
-                        Issues
-                      </h3>
-                      <div className="space-y-2">
-                        {issues.map(issue => (
-                          <div key={issue.id} className="text-sm bg-gray-50 p-2 rounded">
-                            <div className="font-medium">{issue.title}</div>
-                            <div className="text-gray-600">{issue.status}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Histórico */}
-                    <div>
-                      <h3 className="text-sm font-medium flex items-center gap-2 mb-2">
-                        <History size={16} />
-                        Histórico
-                      </h3>
-                      <div className="space-y-2">
-                        {history.map(entry => (
-                          <div key={entry.id} className="text-sm text-gray-600">
-                            {entry.description}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  {/* Barra lateral */}
+                  <IssuesSidebar />
                 </div>
               )}
             </div>
