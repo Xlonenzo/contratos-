@@ -4,7 +4,8 @@ import {
   FileText,
   Settings,
   Users,
-  Palette
+  Palette,
+  Building
 } from 'lucide-react';
 
 // Menu principal da Sidebar
@@ -20,6 +21,12 @@ export const menuItems = [
     icon: <FileText size={20} />,
     path: '/pages/contracts',
     description: 'Gestão de contratos'
+  },
+  {
+    name: 'Empresas',
+    icon: <Building size={20} />,
+    path: '/pages/empresas',
+    description: 'Gestão de empresas'
   },
   {
     name: 'Administração',

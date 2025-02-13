@@ -69,3 +69,36 @@ class BaseResponse(BaseModel):
     data: Optional[dict] = None
     error: Optional[str] = None
 
+# Schemas para Empresas
+class EmpresaBase(BaseModel):
+    razaoSocial: str
+    nomeFantasia: Optional[str] = None
+    cnpj: str
+    inscricaoEstadual: Optional[str] = None
+    endereco: Optional[str] = None
+    numero: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    cep: Optional[str] = None
+    telefone: Optional[str] = None
+    email: str
+    status: str = "ativo"
+
+    class Config:
+        from_attributes = True
+
+class EmpresaCreate(EmpresaBase):
+    pass
+
+class EmpresaUpdate(EmpresaBase):
+    pass
+
+class Empresa(EmpresaBase):
+    id: int
+    dataCadastro: datetime
+
+    class Config:
+        from_attributes = True
+

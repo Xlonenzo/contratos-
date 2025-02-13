@@ -11,6 +11,7 @@ import Customization from './components/Customization';
 import HomeContent from './components/HomeContent';
 import { menuItems } from './data/menuItems';
 import ContractsManagement from './pages/contracts/ContractsManagement';
+import EmpresasManagement from './pages/empresas/EmpresasManagement';
 
 function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -138,6 +139,15 @@ function AppContent() {
               path="/pages/contracts" 
               element={
                 <ContractsManagement 
+                  buttonColor={customization.button_color}
+                  isSidebarCollapsed={isSidebarCollapsed}
+                />
+              } 
+            />
+            <Route 
+              path="/pages/empresas" 
+              element={
+                <EmpresasManagement 
                   buttonColor={customization.button_color}
                   isSidebarCollapsed={isSidebarCollapsed}
                 />

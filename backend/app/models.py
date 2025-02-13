@@ -45,4 +45,28 @@ class Customization(Base):
     button_color = Column(String)
     font_color = Column(String)
 
+class Empresa(Base):
+    __tablename__ = "empresas"
+    __table_args__ = {"schema": "xlon"}
+
+    id = Column(Integer, primary_key=True, index=True)
+    razao_social = Column(String(255), nullable=False)
+    nome_fantasia = Column(String(255))
+    cnpj = Column(String(14), unique=True, nullable=False)
+    inscricao_estadual = Column(String(20))
+    endereco = Column(String(255))
+    numero = Column(String(10))
+    complemento = Column(String(100))
+    bairro = Column(String(100))
+    cidade = Column(String(100))
+    estado = Column(String(2))
+    cep = Column(String(8))
+    telefone = Column(String(20))
+    email = Column(String(255), nullable=False)
+    status = Column(String(10), default="ativo")
+    data_cadastro = Column(SQLDateTime(timezone=True), server_default=func.now())
+
+    class Config:
+        orm_mode = True
+
 
