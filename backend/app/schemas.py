@@ -102,3 +102,56 @@ class Empresa(EmpresaBase):
     class Config:
         from_attributes = True
 
+class IndividualBase(BaseModel):
+    nome: str
+    cpf: str
+    rg: Optional[str] = None
+    orgao_emissor: Optional[str] = None
+    data_emissao: Optional[datetime] = None
+    data_nascimento: datetime
+    sexo: Optional[str] = None
+    estado_civil: Optional[str] = None
+    nacionalidade: Optional[str] = None
+    naturalidade: Optional[str] = None
+    profissao: Optional[str] = None
+    nome_pai: Optional[str] = None
+    nome_mae: Optional[str] = None
+    titulo_eleitor: Optional[str] = None
+    zona_eleitoral: Optional[str] = None
+    secao_eleitoral: Optional[str] = None
+    carteira_trabalho: Optional[str] = None
+    serie_ctps: Optional[str] = None
+    pis_pasep: Optional[str] = None
+    endereco: Optional[str] = None
+    numero: Optional[str] = None
+    complemento: Optional[str] = None
+    bairro: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    cep: Optional[str] = None
+    telefone: Optional[str] = None
+    celular: Optional[str] = None
+    email: str
+    banco: Optional[str] = None
+    agencia: Optional[str] = None
+    conta: Optional[str] = None
+    tipo_conta: Optional[str] = None
+    status: str = "ativo"
+    observacoes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class IndividualCreate(IndividualBase):
+    pass
+
+class IndividualUpdate(IndividualBase):
+    pass
+
+class Individual(IndividualBase):
+    id: int
+    data_cadastro: datetime
+
+    class Config:
+        from_attributes = True
+

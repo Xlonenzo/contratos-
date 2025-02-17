@@ -69,4 +69,49 @@ class Empresa(Base):
     class Config:
         orm_mode = True
 
+class Individual(Base):
+    __tablename__ = "individuals"
+    __table_args__ = {"schema": "xlon"}
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(255), nullable=False)
+    cpf = Column(String(11), unique=True, nullable=False)
+    rg = Column(String(20))
+    orgao_emissor = Column(String(20))
+    data_emissao = Column(SQLDateTime)
+    data_nascimento = Column(SQLDateTime, nullable=False)
+    sexo = Column(String(1))
+    estado_civil = Column(String(20))
+    nacionalidade = Column(String(100))
+    naturalidade = Column(String(100))
+    profissao = Column(String(100))
+    nome_pai = Column(String(255))
+    nome_mae = Column(String(255))
+    titulo_eleitor = Column(String(20))
+    zona_eleitoral = Column(String(10))
+    secao_eleitoral = Column(String(10))
+    carteira_trabalho = Column(String(20))
+    serie_ctps = Column(String(10))
+    pis_pasep = Column(String(20))
+    endereco = Column(String(255))
+    numero = Column(String(10))
+    complemento = Column(String(100))
+    bairro = Column(String(100))
+    cidade = Column(String(100))
+    estado = Column(String(2))
+    cep = Column(String(8))
+    telefone = Column(String(20))
+    celular = Column(String(20))
+    email = Column(String(255), nullable=False)
+    banco = Column(String(100))
+    agencia = Column(String(10))
+    conta = Column(String(20))
+    tipo_conta = Column(String(20))
+    status = Column(String(10), default="ativo")
+    observacoes = Column(String(1000))
+    data_cadastro = Column(SQLDateTime(timezone=True), server_default=func.now())
+
+    class Config:
+        orm_mode = True
+
 

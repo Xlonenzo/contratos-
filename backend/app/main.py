@@ -543,6 +543,207 @@ def delete_empresa(
         logger.error(f"Erro ao excluir empresa: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro ao excluir empresa")
 
+# Rotas para Indivíduos
+@app.post("/api/individuos", response_model=schemas.Individual)
+def create_individual(
+    individual: schemas.IndividualCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # Validar campos obrigatórios
+        if not individual.nome:
+            raise HTTPException(
+                status_code=400,
+                detail="O Nome é obrigatório"
+            )
+
+        if not individual.cpf:
+            raise HTTPException(
+                status_code=400,
+                detail="O CPF é obrigatório"
+            )
+
+        if not individual.email:
+            raise HTTPException(
+                status_code=400,
+                detail="O Email é obrigatório"
+            )
+
+        if not individual.data_nascimento:
+            raise HTTPException(
+                status_code=400,
+                detail="A Data de Nascimento é obrigatória"
+            )
+
+        # Limpar e validar CPF
+        cpf_limpo = ''.join(filter(str.isdigit, individual.cpf))
+        if len(cpf_limpo) != 11:
+            raise HTTPException(
+                status_code=400,
+                detail="CPF inválido. O CPF deve conter 11 dígitos"
+            )
+
+        # Verificar se CPF já existe
+        db_individual = db.query(models.Individual).filter(models.Individual.cpf == cpf_limpo).first()
+        if db_individual:
+            raise HTTPException(
+                status_code=400,
+                detail=f"CPF {individual.cpf} já está cadastrado"
+            )
+
+        # Limpar outros campos
+        telefone_limpo = ''.join(filter(str.isdigit, individual.telefone)) if individual.telefone else None
+        celular_limpo = ''.join(filter(str.isdigit, individual.celular)) if individual.celular else None
+        cep_limpo = ''.join(filter(str.isdigit, individual.cep)) if individual.cep else None
+
+        # Criar novo indivíduo
+        db_individual = models.Individual(
+            nome=individual.nome,
+            cpf=cpf_limpo,
+            rg=individual.rg,
+            orgao_emissor=individual.orgao_emissor,
+            data_emissao=individual.data_emissao,
+            data_nascimento=individual.data_nascimento,
+            sexo=individual.sexo,
+            estado_civil=individual.estado_civil,
+            nacionalidade=individual.nacionalidade,
+            naturalidade=individual.naturalidade,
+            profissao=individual.profissao,
+            nome_pai=individual.nome_pai,
+            nome_mae=individual.nome_mae,
+            titulo_eleitor=individual.titulo_eleitor,
+            zona_eleitoral=individual.zona_eleitoral,
+            secao_eleitoral=individual.secao_eleitoral,
+            carteira_trabalho=individual.carteira_trabalho,
+            serie_ctps=individual.serie_ctps,
+            pis_pasep=individual.pis_pasep,
+            endereco=individual.endereco,
+            numero=individual.numero,
+            complemento=individual.complemento,
+            bairro=individual.bairro,
+            cidade=individual.cidade,
+            estado=individual.estado,
+            cep=cep_limpo,
+            telefone=telefone_limpo,
+            celular=celular_limpo,
+            email=individual.email,
+            banco=individual.banco,
+            agencia=individual.agencia,
+            conta=individual.conta,
+            tipo_conta=individual.tipo_conta,
+            status=individual.status,
+            observacoes=individual.observacoes
+        )
+
+        db.add(db_individual)
+        db.commit()
+        db.refresh(db_individual)
+        return db_individual
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao criar indivíduo: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/individuos", response_model=List[schemas.Individual])
+def list_individuals(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        individuals = db.query(models.Individual).all()
+        return individuals
+    except Exception as e:
+        logger.error(f"Erro ao listar indivíduos: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao listar indivíduos")
+
+@app.get("/api/individuos/{individual_id}", response_model=schemas.Individual)
+def get_individual(
+    individual_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        individual = db.query(models.Individual).filter(models.Individual.id == individual_id).first()
+        if individual is None:
+            raise HTTPException(status_code=404, detail="Indivíduo não encontrado")
+        return individual
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Erro ao buscar indivíduo: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar indivíduo")
+
+@app.put("/api/individuos/{individual_id}", response_model=schemas.Individual)
+def update_individual(
+    individual_id: int,
+    individual: schemas.IndividualUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        db_individual = db.query(models.Individual).filter(models.Individual.id == individual_id).first()
+        if db_individual is None:
+            raise HTTPException(status_code=404, detail="Indivíduo não encontrado")
+
+        # Verificar se o novo CPF já existe
+        if individual.cpf:
+            cpf_limpo = ''.join(filter(str.isdigit, individual.cpf))
+            existing_individual = db.query(models.Individual).filter(
+                models.Individual.cpf == cpf_limpo,
+                models.Individual.id != individual_id
+            ).first()
+            if existing_individual:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"CPF {individual.cpf} já está cadastrado para outro indivíduo"
+                )
+
+        # Atualizar campos
+        for key, value in individual.dict(exclude_unset=True).items():
+            setattr(db_individual, key, value)
+
+        db.commit()
+        db.refresh(db_individual)
+        return db_individual
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao atualizar indivíduo: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao atualizar indivíduo")
+
+@app.delete("/api/individuos/{individual_id}", response_model=schemas.Individual)
+def delete_individual(
+    individual_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        db_individual = db.query(models.Individual).filter(models.Individual.id == individual_id).first()
+        if db_individual is None:
+            raise HTTPException(status_code=404, detail="Indivíduo não encontrado")
+
+        if db_individual.status == "inativo":
+            raise HTTPException(status_code=400, detail="Este indivíduo já está inativo")
+
+        # Soft delete - apenas muda o status para inativo
+        db_individual.status = "inativo"
+        db.commit()
+        db.refresh(db_individual)
+        return db_individual
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao excluir indivíduo: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao excluir indivíduo")
+
 if __name__ == "__main__":
     logger.info("Iniciando a aplicação...")
     models.Base.metadata.create_all(bind=engine)

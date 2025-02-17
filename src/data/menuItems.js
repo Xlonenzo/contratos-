@@ -29,6 +29,12 @@ export const menuItems = [
     description: 'Gestão de empresas'
   },
   {
+    name: 'Indivíduos',
+    icon: <Users size={20} />,
+    path: '/pages/individuos',
+    description: 'Gestão de indivíduos'
+  },
+  {
     name: 'Administração',
     icon: <Settings size={20} />,
     path: '/admin',
