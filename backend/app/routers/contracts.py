@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.database.database import get_db
-from backend.database.models import Contract, Issue, IssueHistory
+from backend.database.models import Contract, Issue, IssueHistory, Empresa
 from backend.utils.auth import get_current_user
 
 router = APIRouter()
@@ -43,3 +43,44 @@ async def create_contract_issue(
     db.commit()
     
     return new_issue 
+
+@router.post("/contracts", response_model=Contract)
+async def create_contract(
+    contract: ContractCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        # Verificar se o número do contrato já existe
+        existing_contract = db.query(Contract).filter(
+            Contract.contract_number == contract.contract_number
+        ).first()
+        if existing_contract:
+            raise HTTPException(status_code=400, detail="Número de contrato já existe")
+
+        # Verificar empresas
+        if contract.party_a_id:
+            empresa_a = db.query(Empresa).filter(
+                Empresa.id == contract.party_a_id
+            ).first()
+            if not empresa_a:
+                raise HTTPException(status_code=400, detail="Empresa A não encontrada")
+
+        if contract.party_b_id:
+            empresa_b = db.query(Empresa).filter(
+                Empresa.id == contract.party_b_id
+            ).first()
+            if not empresa_b:
+                raise HTTPException(status_code=400, detail="Empresa B não encontrada")
+
+        # Criar novo contrato
+        contract_data = contract.dict()
+        db_contract = Contract(**contract_data)
+        db.add(db_contract)
+        db.commit()
+        db.refresh(db_contract)
+        return db_contract
+    except Exception as e:
+        db.rollback()
+        print("Erro ao criar contrato:", str(e))
+        raise HTTPException(status_code=400, detail=str(e)) 

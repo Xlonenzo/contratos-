@@ -11,6 +11,7 @@ from .database import SessionLocal, engine
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from .security import create_access_token, verify_token
+from datetime import datetime
 
 # Configuração de logging
 logging.basicConfig(
@@ -743,6 +744,96 @@ def delete_individual(
         db.rollback()
         logger.error(f"Erro ao excluir indivíduo: {str(e)}")
         raise HTTPException(status_code=500, detail="Erro ao excluir indivíduo")
+
+@app.post("/api/contracts", response_model=schemas.Contract)
+def create_contract(
+    contract: schemas.ContractCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # Validar se o número do contrato já existe
+        existing_contract = db.query(models.Contract).filter(
+            models.Contract.contract_number == contract.contract_number
+        ).first()
+        if existing_contract:
+            raise HTTPException(
+                status_code=400,
+                detail="Número de contrato já existe"
+            )
+
+        # Validar datas
+        if contract.expiration_date <= contract.effective_date:
+            raise HTTPException(
+                status_code=400,
+                detail="Data de término deve ser posterior à data de início"
+            )
+
+        # Validar se as organizações existem
+        party_a = db.query(models.Empresa).filter(
+            models.Empresa.id == contract.party_a_id
+        ).first()
+        if not party_a:
+            raise HTTPException(
+                status_code=400,
+                detail="Organização A não encontrada"
+            )
+
+        party_b = db.query(models.Empresa).filter(
+            models.Empresa.id == contract.party_b_id
+        ).first()
+        if not party_b:
+            raise HTTPException(
+                status_code=400,
+                detail="Organização B não encontrada"
+            )
+
+        # Criar o contrato
+        contract_data = contract.dict()
+        contract_data['last_modified_by'] = current_user.id
+        contract_data['audit_log'] = [f"Contrato criado por {current_user.username} em {datetime.now()}"]
+        
+        db_contract = models.Contract(**contract_data)
+        db.add(db_contract)
+        db.commit()
+        db.refresh(db_contract)
+        return db_contract
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao criar contrato: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/contracts", response_model=List[schemas.Contract])
+def list_contracts(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        contracts = db.query(models.Contract).all()
+        return contracts
+    except Exception as e:
+        logger.error(f"Erro ao listar contratos: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao listar contratos")
+
+@app.get("/api/contracts/{contract_id}", response_model=schemas.Contract)
+def get_contract(
+    contract_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        contract = db.query(models.Contract).filter(models.Contract.id == contract_id).first()
+        if contract is None:
+            raise HTTPException(status_code=404, detail="Contrato não encontrado")
+        return contract
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Erro ao buscar contrato: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro ao buscar contrato")
 
 if __name__ == "__main__":
     logger.info("Iniciando a aplicação...")

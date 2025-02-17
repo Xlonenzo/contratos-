@@ -1,5 +1,5 @@
 # models.py
-from sqlalchemy import Column, Integer, String, Boolean, DateTime as SQLDateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime as SQLDateTime, Date, Text, ARRAY, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -20,21 +20,6 @@ class User(Base):
 
     def __repr__(self):
         return f"User(id={self.id}, username={self.username}, email={self.email})"
-
-class Organization(Base):
-    __tablename__ = "organizations"
-    __table_args__ = {"schema": "xlon"}
-
-    org_id = Column(Integer, primary_key=True)
-    org_name = Column(String(200), nullable=False)
-    org_type = Column(String(50))
-    tax_identification_number = Column(String(20), unique=True)
-    address = Column(String(200))
-    city = Column(String(100))
-    state = Column(String(50))
-    country = Column(String(50))
-    created_at = Column(SQLDateTime(timezone=True), server_default=func.now())
-    updated_at = Column(SQLDateTime(timezone=True), onupdate=func.now())
 
 class Customization(Base):
     __tablename__ = "customizations"
@@ -110,6 +95,44 @@ class Individual(Base):
     status = Column(String(10), default="ativo")
     observacoes = Column(String(1000))
     data_cadastro = Column(SQLDateTime(timezone=True), server_default=func.now())
+
+    class Config:
+        orm_mode = True
+
+class Contract(Base):
+    __tablename__ = "contracts"
+    __table_args__ = {"schema": "xlon"}
+
+    contract_id = Column(Integer, primary_key=True, index=True)
+    contract_number = Column(String(50), unique=True, nullable=False)
+    contract_name = Column(String(200), nullable=False)
+    contract_type = Column(String(100))
+    contract_category = Column(String(100))
+    version = Column(Integer, default=1)
+    status = Column(String(50), default='pending')
+    
+    # Partes do contrato - apenas empresas
+    party_a_id = Column(Integer, ForeignKey('xlon.empresas.id'))
+    party_b_id = Column(Integer, ForeignKey('xlon.empresas.id'))
+    
+    party_a_role = Column(String(100))
+    party_b_role = Column(String(100))
+    effective_date = Column(Date, nullable=False)
+    expiration_date = Column(Date, nullable=False)
+    renewal_terms = Column(String(500))
+    payment_terms = Column(Text)
+    escalation_clauses = Column(Text)
+    document_content = Column(Text)
+    
+    created_at = Column(SQLDateTime(timezone=True), server_default=func.current_timestamp())
+    last_modified_at = Column(SQLDateTime(timezone=True), onupdate=func.current_timestamp())
+    last_modified_by = Column(Integer, ForeignKey('xlon.users.id'))
+    audit_log = Column(ARRAY(String))
+
+    # Relacionamentos - apenas empresas
+    party_a = relationship("Empresa", foreign_keys=[party_a_id])
+    party_b = relationship("Empresa", foreign_keys=[party_b_id])
+    modifier = relationship("User", foreign_keys=[last_modified_by])
 
     class Config:
         orm_mode = True

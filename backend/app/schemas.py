@@ -1,8 +1,8 @@
 # schemas.py
 
 from pydantic import BaseModel, EmailStr
-from typing import Optional, Dict, Any
-from datetime import datetime
+from typing import Optional, Dict, Any, List
+from datetime import datetime, date
 
 # 1. Schemas para Autenticação
 class UserLogin(BaseModel):
@@ -151,6 +151,42 @@ class IndividualUpdate(IndividualBase):
 class Individual(IndividualBase):
     id: int
     data_cadastro: datetime
+
+    class Config:
+        from_attributes = True
+
+# Adicione após os schemas existentes
+
+class ContractBase(BaseModel):
+    contract_number: str
+    contract_name: str
+    contract_type: str
+    contract_category: str
+    status: str = 'pending'
+    party_a_id: Optional[int] = None
+    party_b_id: Optional[int] = None
+    party_a_role: Optional[str] = None
+    party_b_role: Optional[str] = None
+    effective_date: date
+    expiration_date: date
+    renewal_terms: Optional[str] = None
+    payment_terms: Optional[str] = None
+    escalation_clauses: Optional[str] = None
+    document_content: Optional[str] = None
+    version: Optional[int] = 1
+
+    class Config:
+        from_attributes = True
+
+class ContractCreate(ContractBase):
+    pass
+
+class Contract(ContractBase):
+    contract_id: int
+    created_at: Optional[datetime] = None
+    last_modified_at: Optional[datetime] = None
+    last_modified_by: Optional[int] = None
+    audit_log: Optional[List[str]] = None
 
     class Config:
         from_attributes = True
