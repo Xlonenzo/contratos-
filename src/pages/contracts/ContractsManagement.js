@@ -127,6 +127,15 @@ const helpInfo = {
   ]
 };
 
+// Adicione esta função de formatação de CPF
+const formatCPF = (cpf) => {
+  if (!cpf) return '';
+  // Remove caracteres não numéricos
+  const numbers = cpf.replace(/\D/g, '');
+  // Aplica a máscara
+  return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+};
+
 function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
   // Estados
   const [contracts, setContracts] = useState([]);
@@ -295,21 +304,50 @@ function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
   // Buscar contratos com a nova estrutura
   const fetchContracts = async () => {
     try {
+      setLoading(true);
       const token = getAuthToken();
+      
+      if (!token) {
+        toast.error('Sessão expirada. Por favor, faça login novamente.');
+        window.location.href = '/login';
+        return;
+      }
+
+      console.log('Buscando contratos...'); // Debug
       const response = await axios.get(`${API_URL}/contracts`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
-      setContracts(response.data);
+
+      console.log('Resposta da API:', response.data); // Debug
+      
+      if (Array.isArray(response.data)) {
+        setContracts(response.data);
+      } else if (response.data.contracts) {
+        setContracts(response.data.contracts);
+      } else {
+        console.error('Formato de resposta inesperado:', response.data);
+        toast.error('Erro no formato dos dados recebidos');
+      }
+      
       setError('');
     } catch (err) {
-      console.error('Erro ao buscar contratos:', err);
-      setError('Erro ao carregar contratos');
+      console.error('Erro detalhado ao buscar contratos:', err);
+      const errorMessage = err.response?.data?.detail || 'Erro ao carregar contratos';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  // Adicione um useEffect para buscar os contratos quando o componente montar
+  useEffect(() => {
+    fetchContracts();
+  }, []); // Array vazio significa que só executa uma vez ao montar
 
   // Modifique o useEffect para carregar os dados
   useEffect(() => {
@@ -639,6 +677,25 @@ function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
     }
   }, []);
 
+  // Adicione logo após a definição do estado contracts
+  useEffect(() => {
+    // Dados mockados para teste
+    const mockContracts = [
+      {
+        id: 1,
+        contract_number: 'CTR-2024-001',
+        contract_name: 'Contrato Teste',
+        contract_type: 'service',
+        status: 'active',
+        effective_date: '2024-01-01',
+        expiration_date: '2024-12-31'
+      }
+    ];
+    
+    // Comente esta linha após confirmar que o componente está funcionando
+    setContracts(mockContracts);
+  }, []);
+
   return (
     <div className={`fixed top-12 ${isSidebarCollapsed ? 'left-16' : 'left-64'} right-0 bottom-0 flex flex-col transition-all duration-300`}>
       {/* Header */}
@@ -948,7 +1005,7 @@ function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
                               <option value="">Selecione um indivíduo...</option>
                               {individuals?.map(individual => (
                                 <option key={individual.id} value={individual.role}>
-                                  {individual.nome} - {individual.role}
+                                  {`${individual.nome} - CPF: ${formatCPF(individual.cpf)}`}
                                 </option>
                               ))}
                             </select>
@@ -1017,7 +1074,7 @@ function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
                               <option value="">Selecione um indivíduo...</option>
                               {individuals?.map(individual => (
                                 <option key={individual.id} value={individual.role}>
-                                  {individual.nome} - {individual.role}
+                                  {`${individual.nome} - CPF: ${formatCPF(individual.cpf)}`}
                                 </option>
                               ))}
                             </select>
@@ -1152,71 +1209,85 @@ function ContractsManagement({ buttonColor, isSidebarCollapsed }) {
 
             {/* Tabela */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    {tableColumns.map(column => (
-                      <th 
-                        key={column.key}
-                        className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200"
-                      >
-                        <button
-                          className="flex items-center gap-1 group"
-                          onClick={() => column.sortable && handleSort(column.key)}
+              {loading ? (
+                <div className="p-4 text-center text-gray-600">
+                  Carregando contratos...
+                </div>
+              ) : error ? (
+                <div className="p-4 text-center text-red-600">
+                  {error}
+                </div>
+              ) : currentContracts.length === 0 ? (
+                <div className="p-4 text-center text-gray-600">
+                  Nenhum contrato encontrado
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      {tableColumns.map(column => (
+                        <th 
+                          key={column.key}
+                          className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200"
                         >
-                          {column.label}
-                          {column.sortable && (
-                            <span className="text-gray-400 group-hover:text-gray-600">
-                              {sortConfig.key === column.key ? (
-                                sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                              ) : (
-                                <ArrowUpDown size={14} />
-                              )}
-                            </span>
-                          )}
-                        </button>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {currentContracts.map((contract) => (
-                    <tr key={contract.id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 text-sm text-gray-900">{contract.contract_number}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{contract.contract_name}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{contract.contract_type}</td>
-                      <td className="px-3 py-2 text-sm">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${CONTRACT_STATUS[contract.status].color}-100 text-${CONTRACT_STATUS[contract.status].color}-800`}>
-                          {CONTRACT_STATUS[contract.status].label}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{contract.effective_date}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{contract.expiration_date}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">
-                        <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => {
-                              setEditingContract(contract);
-                              setIsAddingContract(false);
-                            }}
-                            className="text-gray-400 hover:text-gray-600"
-                            title="Editar"
+                            className="flex items-center gap-1 group"
+                            onClick={() => column.sortable && handleSort(column.key)}
                           >
-                            <Pen size={16} />
+                            {column.label}
+                            {column.sortable && (
+                              <span className="text-gray-400 group-hover:text-gray-600">
+                                {sortConfig.key === column.key ? (
+                                  sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                ) : (
+                                  <ArrowUpDown size={14} />
+                                )}
+                              </span>
+                            )}
                           </button>
-                          <button
-                            onClick={() => {/* Implementar exclusão */}}
-                            className="text-gray-400 hover:text-red-600"
-                            title="Excluir"
-                          >
-                            <Trash size={16} />
-                          </button>
-                        </div>
-                      </td>
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {currentContracts.map((contract) => (
+                      <tr key={contract.id} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 text-sm text-gray-900">{contract.contract_number}</td>
+                        <td className="px-3 py-2 text-sm text-gray-900">{contract.contract_name}</td>
+                        <td className="px-3 py-2 text-sm text-gray-900">{contract.contract_type}</td>
+                        <td className="px-3 py-2 text-sm">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${CONTRACT_STATUS[contract.status].color}-100 text-${CONTRACT_STATUS[contract.status].color}-800`}>
+                            {CONTRACT_STATUS[contract.status].label}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-900">{contract.effective_date}</td>
+                        <td className="px-3 py-2 text-sm text-gray-900">{contract.expiration_date}</td>
+                        <td className="px-3 py-2 text-sm text-gray-900">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingContract(contract);
+                                setIsAddingContract(false);
+                              }}
+                              className="text-gray-400 hover:text-gray-600"
+                              title="Editar"
+                            >
+                              <Pen size={16} />
+                            </button>
+                            <button
+                              onClick={() => {/* Implementar exclusão */}}
+                              className="text-gray-400 hover:text-red-600"
+                              title="Excluir"
+                            >
+                              <Trash size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
 
             {/* Paginação */}
